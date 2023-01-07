@@ -116,7 +116,12 @@ int main (int argc, char *argv[])
 static void waitForOrder ()
 {
     /* insert your code here */
-    //
+    //decrease waitOrder semaphore
+    if (semDown (semgid, sh->waitOrder) == -1) {                                                    /* enter critical region */
+        perror ("error on the up operation for semaphore access (PT)");
+        exit (EXIT_FAILURE);
+    }
+
 
 
     if (semDown (semgid, sh->mutex) == -1) {                                                    /* enter critical region */
@@ -125,6 +130,12 @@ static void waitForOrder ()
     }
 
     /* insert your code here */
+    //food order = 0
+    sh->fSt.foodOrder = 0;
+    //chef state = COOK
+    sh->fSt.st.chefStat = COOK;
+    //save internal state
+    saveState (nFic, &sh->fSt);
 
     if (semUp (semgid, sh->mutex) == -1) {                                                      /* exit critical region */
         perror ("error on the up operation for semaphore access (PT)");
@@ -148,6 +159,12 @@ static void processOrder ()
     }
 
     /* insert your code here */
+    //chef state = REST
+    sh->fSt.st.chefStat = REST;
+    //save internal state
+    saveState (nFic, &sh->fSt);
+    //increase foodReady flag
+    sh->fSt.foodReady = 1;
 
     if (semUp (semgid, sh->mutex) == -1) {                                                      /* exit critical region */
         perror ("error on the up operation for semaphore access (PT)");
@@ -155,5 +172,10 @@ static void processOrder ()
     }
 
     /* insert your code here */
+    //increase waiterRequest semaphore
+    if (semUp (semgid, sh->waiterRequest) == -1) {                                                    /* enter critical region */
+        perror ("error on the up operation for semaphore access (PT)");
+        exit (EXIT_FAILURE);
+    }
 }
 

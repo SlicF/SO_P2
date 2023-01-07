@@ -190,6 +190,8 @@ static bool waitFriends(int id)
     if(sh->fSt.tableClients == TABLESIZE){
         sh->fSt.st.clientStat[id] = WAIT_FOR_FOOD;
         saveState(nFic, &sh->fSt);
+        //table last client=ID
+        sh->fSt.tableLast = id;
         if(semUp(semgid, sh->friendsArrived) == -1){
             perror("error on the up operation for semaphore access (CT)");
             exit(EXIT_FAILURE);
@@ -364,7 +366,7 @@ static void waitAndPay (int id)
         /* insert your code here */
         //paymentRequest = 1 and update client state
         sh->fSt.paymentRequest = 1;
-        sh->fSt.st.clientStat[id] = WAIT_FOR_BILL;
+        sh->fSt.st.clientStat[sh->fSt.tableLast] = WAIT_FOR_BILL;
         //save internal state
         saveState(nFic, &sh->fSt);
         //INCREMENT SEMAPHORE waiterRequest
