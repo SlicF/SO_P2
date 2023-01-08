@@ -167,10 +167,6 @@ static bool waitFriends(int id)
     }
 
     /* insert your code here */
-    //udpate client state
-    sh->fSt.st.clientStat[id] = INIT;
-    //save internal state
-    saveState(nFic, &sh->fSt);
     //increment number of clients at the table
     sh->fSt.tableClients++;
     //if first client
@@ -186,15 +182,18 @@ static bool waitFriends(int id)
     }
 
 
-    //if table is complete clientState = WAIT_FOR_FOOD, increment semaphore friendsArrived
+    //if table is complete clientState = WAIT_FOR_FRIENDS, increment semaphore friendsArrived
     if(sh->fSt.tableClients == TABLESIZE){
-        sh->fSt.st.clientStat[id] = WAIT_FOR_FOOD;
-        saveState(nFic, &sh->fSt);
-        //table last client=ID
         sh->fSt.tableLast = id;
-        if(semUp(semgid, sh->friendsArrived) == -1){
-            perror("error on the up operation for semaphore access (CT)");
-            exit(EXIT_FAILURE);
+        sh->fSt.st.clientStat[id] = WAIT_FOR_FRIENDS;
+        saveState(nFic, &sh->fSt);
+        //for i in 0 to TABLESIZE
+        for(int i = 0; i < TABLESIZE; i++){
+            //increment semaphore friendsArrived
+            if(semUp(semgid, sh->friendsArrived) == -1){
+                perror("error on the up operation for semaphore access (CT)");
+                exit(EXIT_FAILURE);
+            }
         }
     }
 
@@ -233,10 +232,6 @@ static void orderFood (int id)
     }
 
     /* insert your code here */
-    //check if first client else exit
-    if(sh->fSt.tableFirst != id){
-        exit(EXIT_FAILURE);
-    }
     //update client state
     sh->fSt.st.clientStat[id] = FOOD_REQUEST;
     //save internal state
@@ -342,20 +337,31 @@ static void waitAndPay (int id)
     //save internal state
     saveState(nFic, &sh->fSt);
 
+    if(sh->fSt.tableFinishEat == TABLESIZE){
+        for(int i = 0; i < TABLESIZE; i++){
+                //increment semaphore friendsArrived
+                if(semUp(semgid, sh->allFinished) == -1){
+                    perror("error on the up operation for semaphore access (CT)");
+                    exit(EXIT_FAILURE);
+                }
+        }
+    }
+
+    if(id==sh->fSt.tableLast){
+        last=true;
+    }
+
     if (semUp (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
         perror ("error on the down operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
 
     /* insert your code here */
-    //if tableFinishEat == TABLESIZE DEC semaphore allFinised
-    if(sh->fSt.tableFinishEat == TABLESIZE){
-        if(semDown(semgid, sh->allFinished) == -1){
-            perror("error on the up operation for semaphore access (CT)");
-            exit(EXIT_FAILURE);
-        }
-        last = true;
+    if(semDown(semgid, sh->allFinished) == -1){
+        perror("error on the up operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
+
 
     if(last) { 
         if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
@@ -374,18 +380,17 @@ static void waitAndPay (int id)
             perror("error on the up operation for semaphore access (CT)");
             exit(EXIT_FAILURE);
         }
-    }
-
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
+        if (semUp (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
         perror ("error on the down operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
+        }
+        //dec semaphore requestReceived
+        if(semDown(semgid, sh->requestReceived) == -1){
+            perror("error on the down operation for semaphore access (CT)");
+            exit(EXIT_FAILURE);
+        }
     }
-    /* insert your code here */
-    //increase semaphore allFinished
-    if(semUp(semgid, sh->allFinished) == -1){
-        perror("error on the down operation for semaphore access (CT)");
-        exit(EXIT_FAILURE);
-    }
+
 
 
 
